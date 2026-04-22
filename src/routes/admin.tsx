@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { createServerFn, useServerFn } from "@tanstack/react-start";
-import { z } from "zod";
+import { useState, type FormEvent } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,41 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
-
-const adminCredentialsSchema = z.object({
-  username: z.string().trim().min(1).max(100),
-  password: z.string().min(1).max(200),
-});
-
-const verifyAdminAccess = createServerFn({ method: "POST" })
-  .inputValidator(adminCredentialsSchema)
-  .handler(async ({ data }) => {
-    const ADMIN_USERNAME = process.env.BERGKAMP25_ADMIN_USERNAME;
-    if (!ADMIN_USERNAME) {
-      throw new Error("Missing BERGKAMP25_ADMIN_USERNAME secret.");
-    }
-
-    const ADMIN_PASSWORD = process.env.BERGKAMP25_ADMIN_PASSWORD;
-    if (!ADMIN_PASSWORD) {
-      throw new Error("Missing BERGKAMP25_ADMIN_PASSWORD secret.");
-    }
-
-    if (data.username !== ADMIN_USERNAME || data.password !== ADMIN_PASSWORD) {
-      throw new Error("Incorrect credentials.");
-    }
-
-    const { data: entries, error } = await supabaseAdmin
-      .from("waitlist_entries")
-      .select("id, name, email, country, audience, created_at")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      throw new Error("Unable to load waitlist entries.");
-    }
-
-    return { entries };
-  });
+import { verifyAdminAccess } from "@/features/bergkamp25.functions";
+import { adminCredentialsSchema } from "@/features/bergkamp25.schemas";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -77,7 +43,7 @@ function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
