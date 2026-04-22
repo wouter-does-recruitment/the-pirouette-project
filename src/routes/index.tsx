@@ -188,7 +188,9 @@ function IndexPage() {
               <div className="max-w-4xl">
                 <p className="mb-6 text-xs uppercase tracking-[0.3em] text-primary/88">02 March 2027</p>
                 <h1 className="max-w-5xl font-display text-[2.75rem] leading-[0.94] text-foreground sm:text-[4.1rem] md:text-[5.4rem] lg:text-[7rem]">
-                  2027. Twenty-five years since the pirouette.
+                  <span className="block">2027.</span>
+                  <span className="block sm:inline">Twenty‑five years</span>{" "}
+                  <span className="block sm:inline">since the pirouette.</span>
                 </h1>
                 <p className="mt-6 max-w-2xl text-[1.3rem] leading-8 text-foreground/80 sm:text-[1.7rem] sm:leading-10">
                   Recreate the most beautiful goal ever scored. Anywhere. On your phone.
