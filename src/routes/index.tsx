@@ -11,10 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { joinWaitlist } from "@/features/bergkamp25.functions";
+import { countries } from "@/features/countries";
+import { getWaitlistCount, joinWaitlist } from "@/features/bergkamp25.functions";
 import { audienceOptions, type WaitlistAudience, waitlistSchema } from "@/features/bergkamp25.schemas";
 import { cn } from "@/lib/utils";
-import { Camera, Goal, Sparkles } from "lucide-react";
+import { Camera, Goal, Instagram, Music2, Sparkles } from "lucide-react";
 
 const pageTitle = "Bergkamp25 — Recreate the most beautiful goal ever scored";
 const pageDescription =
@@ -55,6 +56,14 @@ type CountdownParts = {
   isLive: boolean;
 };
 
+const initialCountdown: CountdownParts = {
+  days: 0,
+  hours: 0,
+  minutes: 0,
+  seconds: 0,
+  isLive: false,
+};
+
 function getCountdownParts(): CountdownParts {
   const now = new Date().getTime();
   const target = new Date(targetDate).getTime();
@@ -76,24 +85,47 @@ function getCountdownParts(): CountdownParts {
 
 function IndexPage() {
   const submitWaitlist = useServerFn(joinWaitlist);
-  const [countdown, setCountdown] = useState<CountdownParts>(() => getCountdownParts());
+  const fetchWaitlistCount = useServerFn(getWaitlistCount);
+  const [countdown, setCountdown] = useState<CountdownParts>(initialCountdown);
   const [form, setForm] = useState<WaitlistFormState>({
     name: "",
     email: "",
     country: "",
     audience: "kid",
   });
+  const [waitlistCount, setWaitlistCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    setCountdown(getCountdownParts());
     const intervalId = window.setInterval(() => {
       setCountdown(getCountdownParts());
     }, 1000);
 
     return () => window.clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    void fetchWaitlistCount()
+      .then(({ count }) => {
+        if (isActive) {
+          setWaitlistCount(count);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setWaitlistCount(0);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [fetchWaitlistCount]);
 
   const countdownItems = useMemo(
     () => [
@@ -120,6 +152,7 @@ function IndexPage() {
       setIsSubmitting(true);
       await submitWaitlist({ data: parsed.data });
       setSuccess("You are on the list.");
+      setWaitlistCount((current) => current + 1);
       setForm({
         name: "",
         email: "",
@@ -154,17 +187,17 @@ function IndexPage() {
             <div className="grid gap-12 lg:grid-cols-[minmax(0,1.15fr)_22rem] lg:items-end">
               <div className="max-w-4xl">
                 <p className="mb-6 text-xs uppercase tracking-[0.3em] text-primary/88">02 March 2027</p>
-                <h1 className="text-balance max-w-5xl font-display text-[3rem] leading-[0.92] text-foreground sm:text-[4.4rem] md:text-[5.6rem] lg:text-[7rem]">
+                <h1 className="max-w-5xl font-display text-[2.75rem] leading-[0.94] text-foreground sm:text-[4.1rem] md:text-[5.4rem] lg:text-[7rem]">
                   2027. Twenty-five years since the pirouette.
                 </h1>
-                <p className="mt-6 max-w-xl text-base leading-7 text-foreground/80 sm:text-lg sm:leading-8">
+                <p className="mt-6 max-w-2xl text-[1.3rem] leading-8 text-foreground/80 sm:text-[1.7rem] sm:leading-10">
                   Recreate the most beautiful goal ever scored. Anywhere. On your phone.
                 </p>
-                <div className="mt-8 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+                <div className="mt-8 flex flex-col items-start gap-4">
                   <Button asChild variant="hero" size="hero">
                     <a href="#waitlist">Join the waitlist</a>
                   </Button>
-                  <div className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
+                  <div className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
                     Tribute project for a singular football moment
                   </div>
                 </div>
@@ -185,17 +218,23 @@ function IndexPage() {
                   ))}
                 </div>
                 <p className="mt-4 text-sm leading-6 text-foreground/72">
-                  {countdown.isLive
-                    ? "The anniversary is here."
-                    : "A measured build toward a moment football still argues about."}
+                  {countdown.isLive ? "The anniversary is here." : "02 March 2002 — Arsenal vs Newcastle, Highbury"}
+                </p>
+              </div>
+            </div>
+
+            <div className="aspect-video w-full border border-line-subtle bg-surface-soft shadow-panel">
+              <div className="flex h-full items-center justify-center px-6 text-center">
+                <p className="font-display text-xl text-foreground/76 sm:text-2xl">
+                  Video placeholder — the moment itself
                 </p>
               </div>
             </div>
 
             <div className="grid gap-4 border-t border-line-subtle pt-6 text-sm text-foreground/74 sm:grid-cols-3 sm:gap-6 sm:pt-8">
-              <FeaturePill icon={Goal} title="A goal remembered as art" />
-              <FeaturePill icon={Camera} title="Captured with a phone and a ball" />
-              <FeaturePill icon={Sparkles} title="Scored against Dennis by motion" />
+              <FeaturePill icon={Camera} title="Film your attempt" description="Phone on the ground, ball at your feet" />
+              <FeaturePill icon={Goal} title="AI scores your pirouette" description="Frame-by-frame comparison with Dennis" />
+              <FeaturePill icon={Sparkles} title="Share the result" description="Your Bergkamp Score, ready for TikTok" />
             </div>
           </div>
         </div>
@@ -209,11 +248,14 @@ function IndexPage() {
               For kids, parents, coaches and the people who still stop when that goal comes on.
             </h2>
             <p className="mt-5 max-w-xl text-base leading-7 text-foreground/78">
-              Phase one is simple. Gather the people who want to see the pirouette passed on properly.
+              First we find the people who care. Then we build it.
             </p>
           </div>
 
           <div className="bg-surface-strong shadow-cinematic border border-line-subtle p-5 sm:p-7">
+            {waitlistCount >= 10 ? (
+              <p className="mb-5 text-sm italic text-muted-foreground">{waitlistCount} people already on the waitlist</p>
+            ) : null}
             <form className="space-y-5" onSubmit={handleSubmit} noValidate>
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
@@ -249,15 +291,21 @@ function IndexPage() {
                 <Label htmlFor="country" className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
                   Country
                 </Label>
-                <Input
-                  id="country"
-                  type="text"
-                  autoComplete="country-name"
-                  placeholder="Country"
-                  value={form.country}
-                  onChange={(event) => setForm((current) => ({ ...current, country: event.target.value }))}
-                  className="h-11 border-line-subtle bg-background/70 text-foreground placeholder:text-muted-foreground"
-                />
+                <Select value={form.country || undefined} onValueChange={(value) => setForm((current) => ({ ...current, country: value }))}>
+                  <SelectTrigger
+                    id="country"
+                    className="h-11 border-line-subtle bg-background/70 text-left text-foreground data-[placeholder]:text-muted-foreground"
+                  >
+                    <SelectValue placeholder="Select your country" />
+                  </SelectTrigger>
+                  <SelectContent className="border-line-subtle bg-popover text-popover-foreground">
+                    {countries.map((country) => (
+                      <SelectItem key={country} value={country}>
+                        {country}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -302,6 +350,29 @@ function IndexPage() {
           </div>
         </div>
       </section>
+
+      <footer className="border-t border-line-subtle px-5 py-8 sm:px-8 lg:px-12">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="font-display text-lg uppercase tracking-[0.22em] text-foreground/92">Bergkamp25</p>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+              A tribute project. Not affiliated with Arsenal FC, Dennis Bergkamp, or the Premier League.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4 text-muted-foreground">
+            <a href="#" aria-label="Instagram" className="transition-colors hover:text-foreground">
+              <Instagram className="h-4 w-4" />
+            </a>
+            <a href="#" aria-label="TikTok" className="transition-colors hover:text-foreground">
+              <Music2 className="h-4 w-4" />
+            </a>
+            <a href="#" aria-label="X" className="text-sm uppercase tracking-[0.16em] transition-colors hover:text-foreground">
+              X
+            </a>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
@@ -309,16 +380,21 @@ function IndexPage() {
 function FeaturePill({
   icon: Icon,
   title,
+  description,
 }: {
   icon: typeof Goal;
   title: string;
+  description: string;
 }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-start gap-3">
       <div className="flex h-10 w-10 items-center justify-center border border-line-subtle bg-surface-soft text-primary">
         <Icon className="h-4 w-4" aria-hidden="true" />
       </div>
-      <p className="max-w-[16rem] text-sm leading-6 text-foreground/72">{title}</p>
+      <div className="max-w-[17rem]">
+        <p className="text-sm font-medium leading-6 text-foreground">{title}</p>
+        <p className="text-sm leading-6 text-foreground/72">{description}</p>
+      </div>
     </div>
   );
 }
