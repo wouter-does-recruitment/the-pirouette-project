@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createServerFn, useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
-import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Constants } from "@/integrations/supabase/types";
+import { joinWaitlist } from "@/features/bergkamp25.functions";
+import { audienceOptions, type WaitlistAudience, waitlistSchema } from "@/features/bergkamp25.schemas";
 import { cn } from "@/lib/utils";
 import { Camera, Goal, Sparkles } from "lucide-react";
 
@@ -21,33 +20,6 @@ const pageTitle = "Bergkamp25 — Recreate the most beautiful goal ever scored";
 const pageDescription =
   "A tribute to Dennis Bergkamp's pirouette goal. Join the Bergkamp25 waitlist and help bring the moment to a new generation.";
 const targetDate = "2027-03-02T00:00:00.000Z";
-
-const audienceOptions = Constants.public.Enums.waitlist_audience;
-
-const waitlistSchema = z.object({
-  name: z.string().trim().min(1, "Name is required").max(100, "Keep it under 100 characters"),
-  email: z.string().trim().email("Enter a valid email").max(255, "Keep it under 255 characters"),
-  country: z.string().trim().min(2, "Country is required").max(100, "Keep it under 100 characters"),
-  audience: z.enum(audienceOptions),
-});
-
-const joinWaitlist = createServerFn({ method: "POST" })
-  .inputValidator(waitlistSchema)
-  .handler(async ({ data }) => {
-    const payload = waitlistSchema.parse(data);
-
-    const { error } = await supabaseAdmin.from("waitlist_entries").insert(payload);
-
-    if (error) {
-      if (error.code === "23505") {
-        throw new Error("That email is already on the list.");
-      }
-
-      throw new Error("Unable to save your place right now.");
-    }
-
-    return { success: true };
-  });
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -57,18 +29,16 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: pageTitle },
       { property: "og:description", content: pageDescription },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: "https://placehold.co/1200x630/0A0A0A/F5F0E8?text=Bergkamp25" },
+      { property: "og:image", content: "/og-bergkamp25.svg" },
       { name: "twitter:title", content: pageTitle },
       { name: "twitter:description", content: pageDescription },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:image", content: "https://placehold.co/1200x630/0A0A0A/F5F0E8?text=Bergkamp25" },
+      { name: "twitter:image", content: "/og-bergkamp25.svg" },
     ],
     links: [{ rel: "canonical", href: "https://id-preview--bf1946be-09a6-492b-a189-f9d7013ca200.lovable.app/" }],
   }),
   component: IndexPage,
 });
-
-type WaitlistAudience = (typeof audienceOptions)[number];
 
 type WaitlistFormState = {
   name: string;
@@ -135,7 +105,7 @@ function IndexPage() {
     [countdown.days, countdown.hours, countdown.minutes, countdown.seconds],
   );
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setSuccess(null);
