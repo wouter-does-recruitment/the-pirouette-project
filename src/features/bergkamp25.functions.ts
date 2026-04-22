@@ -2,6 +2,16 @@ import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { adminCredentialsSchema, waitlistSchema } from "./bergkamp25.schemas";
 
+export const getWaitlistCount = createServerFn({ method: "GET" }).handler(async () => {
+  const { count, error } = await supabaseAdmin.from("waitlist_entries").select("id", { count: "exact", head: true });
+
+  if (error) {
+    throw new Error("Unable to load waitlist count.");
+  }
+
+  return { count: count ?? 0 };
+});
+
 export const joinWaitlist = createServerFn({ method: "POST" })
   .inputValidator(waitlistSchema)
   .handler(async ({ data }) => {
